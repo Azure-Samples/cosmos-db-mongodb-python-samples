@@ -1,8 +1,13 @@
 name: Validate Python projects
 on:
   push:
+  pull_request:
+    paths:
+      - '**.py'
+    branches:
+      - main
 jobs:
-  find_projects:
+  index:
     name: Generate matrix of project directories
     runs-on: ubuntu-latest
     outputs:
@@ -14,15 +19,15 @@ jobs:
       run: find -name '*.py' -type 'f' -printf '%h\n' | uniq
     - name: Set output
       id: set_output
-      run: echo "matches=$(find -name '*.py' -type 'f' -printf '%h\n' | uniq | jq --raw-input --compact-output --sort-keys '[., input?]')" >> $GITHUB_OUTPUT
+      run: echo "matches=$(find -name '*.py' -type 'f' -printf '%h\n' | uniq | jq --null-input --raw-input --compact-output --sort-keys '[inputs|select(length > 0)]')" >> $GITHUB_OUTPUT
   validate:
     name: Validate Python project
-    needs: find_projects
+    needs: index
     runs-on: ubuntu-latest
     container: python:3.7
     strategy:
       matrix:
-        project-directory: ${{ fromJson(needs.find_projects.outputs.projects) }}
+        project-directory: ${{ fromJson(needs.index.outputs.projects) }}
     defaults:
       run:
         working-directory: ${{ matrix.project-directory }}
@@ -37,3 +42,19 @@ jobs:
         run: flake8 --count --verbose *.py
       - name: Check format with black
         run: black --check --verbose --line-length 79 *.py
+  summarize:
+    name: Summarize all validation jobs
+    needs: 
+      - index
+      - validate
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Evaluate status of jobs
+        if: >-
+          ${{
+               contains(needs.*.result, 'failure')
+            || contains(needs.*.result, 'cancelled')
+            || contains(needs.*.result, 'skipped')
+          }}
+        run: exit 1
