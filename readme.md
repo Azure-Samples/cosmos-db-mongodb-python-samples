@@ -24,13 +24,6 @@ pip install pymongo
 python 001-quickstart/app.py
 ```
 
-The application should output a single JSON object.
-
-```json
-```
-
-> **💡 TIP**: The fields assigned by Azure Cosmos DB (ex. `id`) will vary from this sample output.
-
 ### Validate any changes you make
 
 If you change the code, run the linter and code formatter.
