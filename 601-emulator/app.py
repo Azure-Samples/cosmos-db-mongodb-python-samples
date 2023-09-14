@@ -30,7 +30,7 @@ if "products" not in db.list_collection_names():
 # </resources>
 
 # <upsert>
-item = {"id": "68719518371", "name": "Kiama classic surfboard"}
+item = {"id": "68719518370", "name": "Kiama classic surfboard"}
 
 collection.update_one(
     filter={"id": item["id"]}, update={"$set": item}, upsert=True
