@@ -1,0 +1,41 @@
+name: Validate Python projects
+on:
+  pull_request:
+    paths:
+      - '**.py'
+    branches:
+      - main
+jobs:
+  find_projects:
+    name: Generate matrix of project directories
+    runs-on: ubuntu-latest
+    outputs:
+      projects: ${{ steps.set_matrix.outputs.matches }}
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v2
+    - name: Set matrix
+      id: set_matrix
+      run: echo "::set-output name=matches::$(find -name '*.py' -type 'f' -printf '%h\n' | uniq | jq --raw-input '[., input]')"
+    validate:
+      name: Validate Python project
+      needs: find_projects
+      runs-on: ubuntu-latest
+      container: python:3.7
+      strategy:
+        matrix:
+          project-directory: ${{ fromJson(needs.find_projects.outputs.projects) }}
+      defaults:
+        run:
+          working-directory: ${{ matrix.project-directory }}
+      steps:
+        - name: Checkout source code
+          uses: actions/checkout@v2
+        - name: Output Python version
+          run: python --version
+        - name: Install packages
+          run: pip install black flake8
+        - name: Lint with flake8
+          run: flake8 --count --verbose *.py
+        - name: Check format with black
+          run: black --check --verbose *.py
